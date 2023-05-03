@@ -6,23 +6,24 @@ import {
   useState,
   useCallback,
 } from 'react';
-import { debounce } from './utils';
+import { throttle, isWindowDefine, throttleEvent } from './utils';
 import { Provider, Section } from './context';
 import smoothscroll from 'smoothscroll-polyfill';
 
 type Props = {
-  debounceDelay?: number;
+  throttleDelay?: number;
   scrollBehavior?: 'auto' | 'smooth';
   offset?: number;
   children: ReactNode;
 };
 
-if (typeof window !== 'undefined') {
+if (isWindowDefine()) {
   smoothscroll.polyfill();
+  throttleEvent('scroll', 'optimizedScroll', document);
 }
 
 export const ScrollingProvider = ({
-  debounceDelay = 50,
+  throttleDelay = 200,
   scrollBehavior = 'smooth',
   offset = 0,
   children,
@@ -31,12 +32,12 @@ export const ScrollingProvider = ({
   const [sections, setSections] = useState<Record<string, Section>>({});
 
   useEffect(() => {
-    document.addEventListener('scroll', debounceScroll, true);
+    document.addEventListener('optimizedScroll', throttleScroll, true);
     handleScroll();
     return () => {
-      document.removeEventListener('scroll', debounceScroll, true);
+      document.removeEventListener('optimizedScroll', throttleScroll, true);
     };
-  }, [sections]);
+  }, []);
 
   const handleScroll = useCallback(() => {
     const selectedSection = Object.keys(sections).reduce(
@@ -68,7 +69,7 @@ export const ScrollingProvider = ({
     if (selected !== selectedSection.id) setSelected(selectedSection.id);
   }, [sections]);
 
-  const debounceScroll = debounce(handleScroll, debounceDelay);
+  const throttleScroll = throttle(handleScroll, throttleDelay);
 
   const registerRef = ({ id, meta }: { id: string; meta: unknown }) => {
     const ref = createRef<HTMLElement>();
